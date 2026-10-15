@@ -2,12 +2,16 @@
   "manifest_version": 3,
   "name": "Talabat Script Library",
   "version": "1.0",
-  "description": "Professional customer-service script library for Talabat agents",
-  "action": {
-    "default_popup": "index.html"
-  },
+  "description": "Talabat Customer Service Script Library Extension",
   "permissions": [
-    "clipboardWrite",
-    "storage"
-  ]
+    "sidePanel",
+    "storage",
+    "clipboardWrite"
+  ],
+  "side_panel": {
+    "default_path": "index.html"
+  },
+  "action": {
+    "default_title": "Open Talabat Script Panel"
+  }
 }
