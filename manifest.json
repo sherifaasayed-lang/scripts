@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Talabat Script Library",
+  "version": "1.0",
+  "description": "Professional customer-service script library for Talabat agents",
+  "action": {
+    "default_popup": "index.html"
+  },
+  "permissions": [
+    "clipboardWrite",
+    "storage"
+  ]
+}
