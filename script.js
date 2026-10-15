@@ -1,22 +1,125 @@
-const approved = [
- {id:'a1',title:'Acknowledge a customer concern',category:'General',tags:'empathy, acknowledge',text:'I understand why this is concerning, and I’ll do my best to help you with the next steps.'},
- {id:'a2',title:'Check an order update',category:'Delivery',tags:'order, status, update',text:'Let me check the latest available update on your order so I can guide you accurately.'},
- {id:'a3',title:'Request details to investigate',category:'General',tags:'details, investigation',text:'To help me check this properly, could you please confirm the relevant order details? Please don’t share payment-card details or passwords.'},
- {id:'a4',title:'Explain that a case needs review',category:'Escalation',tags:'review, escalation',text:'This needs a further review before I can confirm the outcome. I’ll follow the applicable process and explain the next step available to you.'},
- {id:'a5',title:'Close a conversation politely',category:'General',tags:'closing, resolved',text:'Is there anything else I can help you with today? Thank you for contacting us.'},
- {id:'a6',title:'Apologize for an inconvenience',category:'General',tags:'apology, empathy',text:'I’m sorry for the inconvenience this has caused. I’ll review the information available and help you understand the next step.'}
+// Default Approved Management Scripts
+const approvedScripts = [
+  {
+    id: 1,
+    title: "Greeting & Order Verification",
+    category: "General",
+    body: "Hello [Customer Name], thank you for reaching out to Talabat Support. My name is [Agent Name]. I would be happy to help you with order #[Order ID] today."
+  },
+  {
+    id: 2,
+    title: "Delayed Delivery Apology",
+    category: "Delivery",
+    body: "I sincerely apologize for the delay in receiving your order #[Order ID]. I am currently checking with the delivery driver and will provide an update shortly."
+  },
+  {
+    id: 3,
+    title: "Missing Item Refund Notice",
+    category: "Refund",
+    body: "I'm sorry to hear that an item was missing from your order. I have initiated a refund of [Amount] to your Talabat Pay balance."
+  }
 ];
-const $=id=>document.getElementById(id);let personal=[],tab='approved';
-const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-try{personal=JSON.parse(localStorage.getItem('serviceScriptPersonal')||'[]');if(!Array.isArray(personal))personal=[];}catch{personal=[];}
-function save(){localStorage.setItem('serviceScriptPersonal',JSON.stringify(personal));}
-function render(){ $('approvedCount').textContent=approved.length;$('personalCount').textContent=personal.length;$('sectionTitle').textContent=tab==='approved'?'Approved library':'My personal scripts';$('sectionKicker').textContent=tab==='approved'?'OFFICIAL CONTENT · DEMO':'PERSONAL WORKSPACE';$('sectionSub').textContent=tab==='approved'?'Reusable responses for common support scenarios.':'Your private reusable snippets in this browser.';
- document.querySelectorAll('.sideitem').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));$('addOpen').hidden=tab!=='personal';const all=[...approved,...personal],cats=[...new Set(all.map(s=>s.category).filter(Boolean))].sort(),old=$('category').value;$('category').innerHTML='<option value="all">All categories</option>'+cats.map(c=>`<option value="${safe(c)}">${safe(c)}</option>`).join('');if(cats.includes(old))$('category').value=old;
- const q=$('search').value.trim().toLowerCase(),cat=$('category').value,src=tab==='approved'?approved:personal;const found=src.filter(s=>(cat==='all'||s.category===cat)&&[s.title,s.text,s.category,s.tags].join(' ').toLowerCase().includes(q));$('resultCount').textContent=`${found.length} script${found.length===1?'':'s'}`;
- $('list').innerHTML=found.length?found.map(s=>`<article class="script"><div class="script-title">${safe(s.title)}</div><span class="tag">${safe(s.category||'Uncategorized')}</span><div class="script-body">${safe(s.text)}</div><div class="scriptfoot"><button class="primary copy" data-copy="${safe(s.id)}">▢ Copy script</button>${tab==='personal'?`<button class="delete" data-delete="${safe(s.id)}">Delete</button>`:''}</div></article>`).join(''):'<div class="empty">No scripts match your search. Try another keyword or category.</div>';
- document.querySelectorAll('[data-copy]').forEach(b=>b.addEventListener('click',()=>copy(b.dataset.copy)));document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>del(b.dataset.delete)));}
-async function copy(id){const s=[...approved,...personal].find(x=>x.id===id);if(!s)return;try{await navigator.clipboard.writeText(s.text);$('status').textContent='Copied “'+s.title+'” to clipboard';}catch{$('status').textContent='Clipboard permission unavailable. Try a secure hosted page.';}}
-function del(id){personal=personal.filter(s=>s.id!==id);save();$('status').textContent='Personal script deleted';render();}
-document.querySelectorAll('.sideitem').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;$('addPanel').hidden=true;render();}));$('search').addEventListener('input',render);$('category').addEventListener('change',render);$('addOpen').addEventListener('click',()=>{$('addPanel').hidden=false;$('newTitle').focus();});$('closeAdd').addEventListener('click',()=>$('addPanel').hidden=true);
-$('saveAdd').addEventListener('click',()=>{const title=$('newTitle').value.trim(),text=$('newText').value.trim();if(!title||!text){$('status').textContent='Please add a title and script text.';return;}personal.unshift({id:'p'+Date.now(),title,text,category:$('newCategory').value.trim()||'Personal',tags:$('newTags').value.trim()});save();['newTitle','newText','newCategory','newTags'].forEach(id=>$(id).value='');$('addPanel').hidden=true;tab='personal';$('status').textContent='Saved in this browser only';render();});
-$('export').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({format:'service-script-library-personal-v1',scripts:personal},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='my-personal-scripts.json';a.click();URL.revokeObjectURL(url);$('status').textContent='Personal scripts export requested';});render();
+
+let personalScripts = JSON.parse(localStorage.getItem("talabat_personal_scripts")) || [];
+let currentTab = "approved";
+
+// Load elements
+const scriptContainer = document.getElementById("scriptContainer");
+const searchInput = document.getElementById("searchInput");
+const categorySelect = document.getElementById("categorySelect");
+const tabBtns = document.querySelectorAll(".tab-btn");
+
+// Render Scripts
+function renderScripts() {
+  scriptContainer.innerHTML = "";
+  const query = searchInput.value.toLowerCase();
+  const selectedCat = categorySelect.value;
+  
+  const dataset = currentTab === "approved" ? approvedScripts : personalScripts;
+
+  const filtered = dataset.filter(item => {
+    ariaMatch = item.title.toLowerCase().includes(query) || item.body.toLowerCase().includes(query);
+    catMatch = selectedCat === "all" || item.category === selectedCat;
+    return ariaMatch && catMatch;
+  });
+
+  if (filtered.length === 0) {
+    scriptContainer.innerHTML = `<p style="font-size:12px; color:#888;">No scripts found.</p>`;
+    return;
+  }
+
+  filtered.forEach(script => {
+    const card = document.createElement("div");
+    card.className = "script-card";
+    
+    const badgeText = currentTab === "approved" ? "Official Approved" : "Personal Script";
+    const badgeClass = currentTab === "approved" ? "badge-approved" : "badge-personal";
+
+    card.innerHTML = `
+      <div class="script-header">
+        <span class="script-title">${script.title}</span>
+        <span class="badge ${badgeClass}">${badgeText}</span>
+      </div>
+      <div class="script-body">${script.body}</div>
+      <button class="copy-btn">📋 Copy Script</button>
+    `;
+
+    // One-click copy logic
+    const copyBtn = card.querySelector(".copy-btn");
+    copyBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(script.body).then(() => {
+        copyBtn.innerText = "✓ Copied!";
+        copyBtn.style.background = "#28a745";
+        setTimeout(() => {
+          copyBtn.innerText = "📋 Copy Script";
+          copyBtn.style.background = "#202124";
+        }, 1500);
+      });
+    });
+
+    scriptContainer.appendChild(card);
+  });
+}
+
+// Tab Switching
+tabBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    tabBtns.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentTab = btn.dataset.tab;
+    renderScripts();
+  });
+});
+
+// Event Listeners
+searchInput.addEventListener("input", renderScripts);
+categorySelect.addEventListener("change", renderScripts);
+
+// Add Personal Script Logic
+document.getElementById("addScriptBtn").addEventListener("click", () => {
+  const title = document.getElementById("newTitle").value.trim();
+  const category = document.getElementById("newCategory").value;
+  const body = document.getElementById("newBody").value.trim();
+
+  if (!title || !body) {
+    alert("Please fill in both the title and script body.");
+    return;
+  }
+
+  const newScript = { id: Date.now(), title, category, body };
+  personalScripts.push(newScript);
+  localStorage.setItem("talabat_personal_scripts", JSON.stringify(personalScripts));
+
+  // Reset inputs
+  document.getElementById("newTitle").value = "";
+  document.getElementById("newBody").value = "";
+
+  // Switch to personal tab & render
+  currentTab = "personal";
+  tabBtns[0].classList.remove("active");
+  tabBtns[1].classList.add("active");
+  renderScripts();
+});
+
+// Initial Render
+renderScripts();
